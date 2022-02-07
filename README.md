@@ -21,7 +21,9 @@ Contact Chloe at chloe.cachet@uconn.edu for additional information or questions 
 This construction uses the Notre-Dame and IITD datasets. You can find them on the following links:
  * [Notre-Dame](https://cvrl.nd.edu/projects/data/#nd-iris-0405-data-set)
  * [IITD](https://www4.comp.polyu.edu.hk/~csajaykr/IITD/Database_Iris.htm)
-Once dowloaded, add them to the features folder.
+
+Once downloaded, add them to the features folder.
+
 
 Make sure you have the following installed:
  * [Python 3.x.x](https://www.python.org/downloads/release/python-350/)
