@@ -1,0 +1,11 @@
+.idea/
+pse/__pycache__/
+fhipe/build/
+fhipe/gen_matrices
+*.prox
+features/ND_proximity_irisR_features
+features/ND_proximity_irisR_all_features_folders.zip
+features/IITD_proximity_irisR_features
+.idea/
+pse/__pycache__/
+venv/
