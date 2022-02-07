@@ -14,7 +14,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 """
 
-import sys, os, math, argparse
+import sys, os, math, argparse, time
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(1, os.path.abspath('..'))
 
@@ -57,6 +57,7 @@ if __name__ == "__main__":
 
     if vector_length == 4:
         print("Testing Basic Predicate Functionality")
+
         x1=[1, -1, -1, 1]
         ctx = barbosa.encrypt(x1)
         y1=[1, 1, 1, 1]
@@ -69,8 +70,8 @@ if __name__ == "__main__":
         assert(not predipe.BarbosaIPEScheme.decrypt(barbosa.getPublicParameters(), ctx, tky2))
         assert(predipe.BarbosaIPEScheme.decrypt(barbosa.getPublicParameters(), ctx, tky1, group_name))
 
-
         print("Testing Proximity Search")
+
         data = [[0, 1, 0, 1], [1, 0, 1, 0]]
         database.encrypt_dataset(data)
         print("Size of DB "+str(database.get_database_size()))
@@ -85,54 +86,86 @@ if __name__ == "__main__":
         relevant_indices = database.search(encrypted_query)
         assert (len(relevant_indices) == 0)
 
+        print("Testing multi basis scheme with 1 base")
 
-
-        print("Testing multi basis scheme")
         x1 = [1, -1, -1, 1]
         x2 = [0, 0, 0, 0]
         y1 = [1, 1, 1, 1]
         y2 = [1, 5, 1, -3]
 
+        multi_scheme = multibasispredipe.MultiBasesPredScheme(n=vector_length, group_name=group_name, num_bases=1)
+        multi_scheme.generate_keys()
+        ctx = multi_scheme.encrypt(x1)
+        tky1 = multi_scheme.keygen(y1)
+        tky2 = multi_scheme.keygen(y2)
+        ctzero = multi_scheme.encrypt(x2)
+        
+        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1))
+        assert (not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2))
+        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky1, group_name))
 
-        # multi_scheme = multibasispredipe.MultiBasesPredScheme(n=vector_length, group_name=group_name, num_bases=1)
-        # multi_scheme.generate_keys()
-        # ctx = multi_scheme.encrypt(x1)
-        # tky1 = multi_scheme.keygen(y1)
-        # tky2 = multi_scheme.keygen(y2)
-        # ctzero = multi_scheme.encrypt(x2)
-        #
-        # assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1))
-        # assert (not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2))
-        # assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky1, group_name))
-        #
-        # multi_scheme = multibasispredipe.MultiBasesPredScheme(n=vector_length, group_name=group_name, num_bases=2)
-        # multi_scheme.generate_keys()
-        # ctx = multi_scheme.encrypt(x1)
-        # tky1 = multi_scheme.keygen(y1)
-        # tky2 = multi_scheme.keygen(y2)
-        # ctzero = multi_scheme.encrypt(x2)
-        #
-        # assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1))
-        # assert (not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2))
-        # assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky1, group_name))
+        print("Testing multi basis scheme with 2 bases")
 
-        for i in [1, 2, 3, 4, 6, 12]:
-            multi_scheme = multibasispredipe.MultiBasesPredScheme(n=12, group_name=group_name, num_bases=6)
-            multi_scheme.generate_keys()
-            ctx = multi_scheme.encrypt([1, 1, 1,  1, 1,  1, 1, -1, 1,  1, 1,  1])
-            tky = multi_scheme.keygen([1, -1, 1, -1, 1, -1, 1,  1, 1, -1, 1, -1])
-            assert (multi_scheme.fake_decrypt(multi_scheme.getPublicParameters(), ctx, tky))
+        multi_scheme = multibasispredipe.MultiBasesPredScheme(n=vector_length, group_name=group_name, num_bases=2)
+        multi_scheme.generate_keys()
+        ctx = multi_scheme.encrypt(x1)
+        tky1 = multi_scheme.keygen(y1)
+        tky2 = multi_scheme.keygen(y2)
+        ctzero = multi_scheme.encrypt(x2)
+        
+        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1))
+        assert (not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2))
+        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky1, group_name))
 
-        # multi_scheme = multibasispredipe.MultiBasesPredScheme(n=vector_length, group_name=group_name, num_bases=4)
-        # multi_scheme.generate_keys()
-        # ctx = multi_scheme.encrypt(x1)
-        # tky1 = multi_scheme.keygen(y1)
-        # tky2 = multi_scheme.keygen(y2)
-        # ctzero = multi_scheme.encrypt(x2)
-        #
-        # assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1))
-        # assert (not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2))
-        # assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky1, group_name))
+        print("Testing multi basis scheme with 4 bases")
+
+        multi_scheme = multibasispredipe.MultiBasesPredScheme(n=vector_length, group_name=group_name, num_bases=4)
+        multi_scheme.generate_keys()
+        ctx = multi_scheme.encrypt(x1)
+        tky1 = multi_scheme.keygen(y1)
+        tky2 = multi_scheme.keygen(y2)
+        ctzero = multi_scheme.encrypt(x2)
+        
+        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1))
+        assert (not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2))
+        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky1, group_name))
+
+    elif vector_length > 4:
+        
+        print("Timing decrypt for vector_length = " + str(vector_length))
+
+        x1, x2, y1, y2 = []
+
+        for i in range(vector_length):
+            x2.append(0)
+            x1.append(i % 2)
+            y1.append(i % 8)
+            y2.append(i % 5)
+
+        if(vector_length % 2 == 0):
+            nb = 2
+        else:
+            nb = 1
+
+        multi_scheme = multibasispredipe.MultiBasesPredScheme(n=vector_length, group_name=group_name, num_bases=nb)
+        multi_scheme.generate_keys()
+        ctx = multi_scheme.encrypt(x1)
+        tky1 = multi_scheme.keygen(y1)
+        tky2 = multi_scheme.keygen(y2)
+        ctzero = multi_scheme.encrypt(x2)
+        
+        start_time = time.time()
+        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1))
+        end_time_1 = time.time()
+        assert (not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2))
+        end_time_2 = time.time()
+        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky1, group_name))
+        end_time_3 = time.time()
+
+        print("First decrypt: " + str(start_time - end_time_1))
+        print("Second decrypt: " + str(start_time - end_time_2))
+        print("Third decrypt: " + str(start_time - end_time_3))
+
 
 
 
