@@ -21,6 +21,9 @@ sys.path.insert(1, os.path.abspath('..'))
 from pse import predipe, prox_search, multibasispredipe
 
 if __name__ == "__main__":
+
+    st = time.time()
+
     parser = argparse.ArgumentParser(description='Benchmarking of Proximity Search Schemes.')
     parser.add_argument('--matrix_file', '-mf', nargs='*', help='The file for the matrices')
     parser.add_argument('--generator_file', '-gf', nargs='*', help='The file for the group generators')
@@ -36,6 +39,7 @@ if __name__ == "__main__":
 
     vector_length = args['vector_length']
 
+    #group_name = 'SS512'
     group_name = 'MNT159'
     barbosa = predipe.BarbosaIPEScheme(n=vector_length)
     database = prox_search.ProximitySearch(vector_length, predipe.BarbosaIPEScheme, group_name)
@@ -54,6 +58,9 @@ if __name__ == "__main__":
     else:
         barbosa.generate_keys()
         database.generate_keys()
+
+    et = time.time()
+    print("Finished set-up in " + str(et-st) + " seconds")
 
     if vector_length == 4:
         print("Testing Basic Predicate Functionality")
@@ -126,15 +133,28 @@ if __name__ == "__main__":
         tky2 = multi_scheme.keygen(y2)
         ctzero = multi_scheme.encrypt(x2)
         
+        start_time_1 = time.time()
         assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1))
+        end_time_1 = time.time()
+        start_time_2 = time.time()
         assert (not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2))
+        end_time_2 = time.time()
+        start_time_3 = time.time()
         assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky1, group_name))
+        end_time_3 = time.time()
+
+        print("Total elapsed time for first decrypt: " + str(end_time_1-start_time_1))
+        print("Total elapsed time for second decrypt: " + str(end_time_2-start_time_2))
+        print("Total elapsed time for third decrypt: " + str(end_time_3-start_time_3))
 
     elif vector_length > 4:
         
-        print("Timing decrypt for vector_length = " + str(vector_length))
+        print("Timings for vector_length = " + str(vector_length))
 
-        x1, x2, y1, y2 = []
+        x1 = []
+        x2 = []
+        y1 = []
+        y2 = []
 
         for i in range(vector_length):
             x2.append(0)
@@ -142,29 +162,111 @@ if __name__ == "__main__":
             y1.append(i % 8)
             y2.append(i % 5)
 
-        if(vector_length % 2 == 0):
-            nb = 2
-        else:
-            nb = 1
+        # number of bases
+        nb = math.ceil(vector_length/40)
 
-        multi_scheme = multibasispredipe.MultiBasesPredScheme(n=vector_length, group_name=group_name, num_bases=nb)
+        multi_scheme = multibasispredipe.MultiBasesPredScheme(n=vector_length, group_name=group_name, num_bases=nb, simulated = True)
         multi_scheme.generate_keys()
-        ctx = multi_scheme.encrypt(x1)
-        tky1 = multi_scheme.keygen(y1)
-        tky2 = multi_scheme.keygen(y2)
-        ctzero = multi_scheme.encrypt(x2)
-        
-        start_time = time.time()
-        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1))
-        end_time_1 = time.time()
-        assert (not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2))
-        end_time_2 = time.time()
-        assert (multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky1, group_name))
-        end_time_3 = time.time()
 
-        print("First decrypt: " + str(start_time - end_time_1))
-        print("Second decrypt: " + str(start_time - end_time_2))
-        print("Third decrypt: " + str(start_time - end_time_3))
+        # arrays for timings
+        KGTimes = []
+        EncTimes = []
+        DecTimes = []
+
+        # iterations
+        n = 100
+
+        print("Timing key gen...")
+        for i in range(n):
+            kg_start_1 = time.time()
+            tky1 = multi_scheme.keygen(y1)
+            kg_end_1 = time.time()
+            kg_start_2 = time.time()
+            tky2 = multi_scheme.keygen(y2)
+            kg_end_2 = time.time()
+            KGTimes.append(((kg_end_1-kg_start_1)+(kg_end_2-kg_start_2))/2)
+        
+        print("Timing encrypt...")
+        for i in range(n):
+            enc_start_1 = time.time()
+            ctx = multi_scheme.encrypt(x1)
+            enc_end_1 = time.time()
+            enc_start_2 = time.time()
+            ctzero = multi_scheme.encrypt(x2)
+            enc_end_2 = time.time()
+            EncTimes.append(((enc_end_1-enc_start_1)+(enc_end_2-enc_start_2))/2)
+        
+        print("Timing decrypt...")
+        for i in range(n):
+            dec_start_1 = time.time()
+            res1 = multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctzero, tky1)
+            dec_end_1 = time.time()
+            dec_start_2 = time.time()
+            res2 = not multi_scheme.decrypt(multi_scheme.getPublicParameters(), ctx, tky2)
+            dec_end_2 = time.time()
+            DecTimes.append(((dec_end_1-dec_start_1)+(dec_end_2-dec_start_2))/2)
+
+        DecSum = 0
+        KGSum = 0 
+        EncSum = 0
+
+        for t in KGTimes:
+            KGSum += t
+
+        for t in EncTimes:
+            EncSum += t
+
+        for t in DecTimes:
+            DecSum += t
+        
+        print("Average time for keyGen: " + str(KGSum/n))
+        print("Average time for encrypt: " + str(EncSum/n))
+        print("Average time for decrypt: " + str(DecSum/n))
+
+        # find variance and standard deviation
+        KGVar = 0
+        EncVar = 0
+        DecVar = 0
+
+        for t in KGTimes:
+            KGVar = (t-(KGSum/n))**2
+            KGVar = KGVar/(n-1)
+
+        for t in EncTimes:
+            EncVar = (t-(EncSum/n))**2
+            EncVar = EncVar/(n-1)
+
+        for t in DecTimes:
+            DecVar = (t-(DecSum/n))**2
+            DecVar = DecVar/(n-1)
+
+        print("KeyGen variance is " + str(KGVar))
+        print("Enc variance is " + str(EncVar))
+        print("Dec variance is " + str(DecVar))
+
+        '''
+        print("Testing Proximity Search")
+
+        prox_start = time.time()
+
+        data = [x1, x2]
+        database.encrypt_dataset(data)
+        print("Size of DB "+str(database.get_database_size()))
+        print("Size of Secret Key "+str(database.get_seckey_size()))
+        query = y1
+        encrypted_query = database.generate_query(query, 1)
+        #assert(len(encrypted_query)==2)
+        relevant_indices = database.search(encrypted_query)
+        #assert(len(relevant_indices)==1 and relevant_indices[0] == 0)
+        encrypted_query = database.generate_query(query, 0)
+        #assert (len(encrypted_query) == 1)
+        relevant_indices = database.search(encrypted_query)
+        #assert (len(relevant_indices) == 0)
+
+        prox_end = time.time()
+
+        print("Total time for prox search: " + str(prox_end-prox_start))
+        '''
 
 
 
